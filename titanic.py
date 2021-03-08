@@ -15,7 +15,7 @@ Created on Thu Feb 11 10:36:42 2021
 # =============================================================================
 
 # =============================================================================
-# Methodology = Superviced learning.
+# Methodology = Superviced learning with classification.
 # =============================================================================
 
 # import packages 
@@ -26,6 +26,21 @@ import seaborn as sns
 import numpy as np
 
 from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import scale
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import cross_val_score
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.model_selection import GridSearchCV
 
 # Configuration
 
@@ -220,7 +235,6 @@ titanic["first_digit_ticket"] = titanic["first_digit_ticket"].astype("category")
 
 titanic["first_digit_ticket_encoded"] = labelencoder.fit_transform(titanic["first_digit_ticket"])
 
-sns.boxplot(titanic.columns)
 
 
 # =============================================================================
@@ -302,7 +316,7 @@ ax.set_ylabel("familySize")
 
 ax = sns.boxplot(x=titanic.SexEncoded, y= titanic.Age, data= titanic)
 ax.set_xlabel("Sex")
-ax.set_ylabel("Fare")
+ax.set_ylabel("Age")
 
 sns.histplot(x = titanic["Age"], hue="SurvivedEncoded", data = titanic)
 
@@ -326,7 +340,6 @@ titanic.drop(["Survived", "Pclass", "Sex", "SibSp", "Parch", "Ticket",
               "Embarked", "Titlename", "FamilySize", 
               "first_digit_ticket"], axis=1, inplace= True)
 
-titanic.drop("first_digit_ticket", axis=1, inplace= True)
 
 titanic.dtypes
 
@@ -350,6 +363,532 @@ sns.heatmap(corr, vmin=-1, vmax=1, center=0,
     cmap=sns.diverging_palette(20, 220, n=200),
     square=True)
 
+# lets see if there is high variance in some features
+
+titanic.describe
+
+# =============================================================================
+# =============================================================================
+# # Generating our X and Y
+# =============================================================================
+# =============================================================================
+
+X = titanic.drop("SurvivedEncoded", axis=1)
+
+y = titanic["SurvivedEncoded"]
+
+#### splitting our data in train and test 
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3,
+                                                    random_state=30, 
+                                                    stratify=y)
 
 
-## recordar reducir la varianza de age y fare 
+# =============================================================================
+# =============================================================================
+# # Creamos nuestro clasificador, en este caso un KNN con 11 vecinos
+# =============================================================================
+# =============================================================================
+
+knn = KNeighborsClassifier(n_neighbors=11)
+
+# fit the model 
+
+knn.fit(X_train, y_train)
+
+# predict 
+
+y_pred = knn.predict(X_test)
+
+# get score 
+
+knn.score(X_train, y_train)
+
+
+# now we are going to try with diferent n_neighbors values
+
+neighbors = np.arange(1,20)   
+accuracy=[]
+
+for i in neighbors:
+    knn = KNeighborsClassifier(n_neighbors=i) 
+    knn.fit(X_train, y_train)
+    y_pred = knn.predict(X_test)
+    accuracy.append(knn.score(X_test, y_test))
+    
+
+# Generate plot to see the best accuracy
+
+plt.title('k-NN: Varying Number of Neighbors')
+plt.plot(neighbors, accuracy, label = 'Testing Accuracy')
+plt.plot(neighbors, accuracy, label = 'Training Accuracy')
+plt.legend()
+plt.xlabel('Number of Neighbors')
+plt.ylabel('Accuracy')
+plt.show()    
+
+print(accuracy)
+
+# =============================================================================
+# Here we manage to have a model with 80% accuracy on the train data and 68%
+# on the test data
+# =============================================================================
+
+
+
+# =============================================================================
+# =============================================================================
+# =============================================================================
+# # # Testing multiple models.
+# =============================================================================
+# =============================================================================
+# =============================================================================
+
+seed = 40
+
+# Logistic Regression
+
+lr = LogisticRegression()
+
+#2.Support Vector Machines
+
+svc = SVC(gamma = "auto")
+
+#3.Random Forest Classifier
+
+rf = RandomForestClassifier(random_state = seed, n_estimators = 100)
+
+#4.KNN
+
+knn = KNeighborsClassifier(n_neighbors=14)
+
+#5.Gaussian Naive Bayes
+
+gnb = GaussianNB()
+
+#6.Decision Tree Classifier
+
+dt = DecisionTreeClassifier(random_state = seed)
+
+#7.Gradient Boosting Classifier
+
+gbc = GradientBoostingClassifier(random_state = seed)
+
+
+#8.Adaboost Classifier
+
+abc = AdaBoostClassifier(random_state = seed)
+
+#9.ExtraTrees Classifier
+
+etc = ExtraTreesClassifier(random_state = seed)
+
+
+
+#List of all the models and indices
+
+modelNames = ["LR", "SVC", "RF", "KNN", "GNB", "DT", "GBC", "ABC", "ETC"]
+models = [lr, svc, rf, knn, gnb, dt, gbc, abc, etc]
+
+
+# creating a function to get the accuracies of all models with train and test
+
+def calculateTrainAccuracy(model):
+    
+    model.fit(X_train, y_train)
+    trainAccuracy = model.score(X_train, y_train)
+    return trainAccuracy
+
+def calculateTestAccuracy(model):
+    
+    model.fit(X_train, y_train)
+    testAccuracy = model.score(X_test, y_test)
+    return testAccuracy
+
+# applying map to get all the scores with train data
+
+modelScoresTrain = list(map(calculateTrainAccuracy, models))
+
+
+trainAccuracy = pd.DataFrame(modelScoresTrain, columns = ["trainAccuracy"], 
+                             index=modelNames)
+
+trainAccuracySorted = trainAccuracy.sort_values(by="trainAccuracy", ascending=False)
+
+trainAccuracySorted
+
+# applying map to get all the scores with test data
+
+modelScoresTest = list(map( calculateTestAccuracy, models))
+
+
+testAccuracy = pd.DataFrame(modelScoresTest, columns = ["testAccuracy"], 
+                             index=modelNames)
+testnAccuracySorted = testAccuracy .sort_values(by="testAccuracy", ascending=False)
+
+testnAccuracySorted
+
+### creating the dataframe of test and train to visualize better 
+
+accuraciesvalues = pd.DataFrame()
+
+accuraciesvalues["testAccuracy"]=testAccuracy["testAccuracy"]
+
+accuraciesvalues["trainAccuracy"]=trainAccuracy["trainAccuracy"]
+
+accuraciesvalues.sort_values("testAccuracy", ascending=False)
+
+# =============================================================================
+# With this information we can see that it seems that RF and ETC are the best
+# models.
+# =============================================================================
+
+
+# =============================================================================
+# To confirm this we have to do some crossvalidation 
+# =============================================================================
+
+def CrossValSCore(model):
+    value = cross_val_score(model, X_train, y_train, cv=10).mean()
+    return value
+
+
+modelscoresCross = list(map(CrossValSCore, models))
+
+
+xCrossScores = pd.DataFrame(modelscoresCross, columns = ["xCrossScores"],
+                          index=modelNames)
+
+xCrossScores.sort_values("xCrossScores", ascending=False)
+
+# =============================================================================
+# With this information we can see that it seems that RF, ETC, GBC and LR
+# are the bestmodels.
+# =============================================================================
+
+# =============================================================================
+# Lets do the hyperparameter tunning using grid search.
+# =============================================================================
+
+# First me have to define all the hyperparameter that we want to optimice.
+
+# For logistic regression
+
+lrParams = {"penalty":["l1", "l2"],
+            "C": np.logspace(0, 4, 10),
+            "max_iter":[5000]}
+
+# For Gradient Boosting Classifier
+
+gbcParams = {"learning_rate": [0.01, 0.02, 0.05, 0.01],
+              "max_depth": [4, 6, 8],
+              "max_features": [1.0, 0.3, 0.1], 
+              "min_samples_split": [ 2, 3, 4],
+              "random_state":[seed]}
+
+# For Support Vector Machines
+
+svcParams = {"C": np.arange(6,13), 
+              "kernel": ["linear","rbf"],
+              "gamma": [0.5, 0.2, 0.1, 0.001, 0.0001]}
+
+# For Decision Tree Classifier
+dtParams = {"max_features": ["auto", "sqrt", "log2"],
+             "min_samples_split": np.arange(2,16), 
+             "min_samples_leaf":np.arange(1,12),
+             "random_state":[seed]}
+
+# For Random Forest Classifier
+rfParams = {"criterion":["gini","entropy"],
+             "n_estimators":[10, 15, 20, 25, 30],
+             "min_samples_leaf":[1, 2, 3],
+             "min_samples_split":np.arange(3,8), 
+             "max_features":["sqrt", "auto", "log2"],
+             "random_state":[44]}
+
+# For KNN KNeighborsClassifier
+knnParams = {"n_neighbors":np.arange(3,9),
+              "leaf_size":[1, 2, 3, 5],
+              "weights":["uniform", "distance"],
+              "algorithm":["auto", "ball_tree","kd_tree","brute"]}
+
+# Adaboost Classifier
+abcParams = {"n_estimators":[1, 5, 10, 15, 20, 25, 40, 50, 60, 80, 100, 130, 160, 200, 250, 300],
+              "learning_rate":[0.0001, 0.001, 0.01, 0.1, 0.2, 0.3,1.5],
+              "random_state":[seed]}
+
+# ExtraTrees Classifier
+etcParams = {"max_depth":[None],
+              "max_features":[1, 3, 10],
+              "min_samples_split":[2, 3, 10],
+              "min_samples_leaf":[1, 3, 10],
+              "bootstrap":[False],
+              "n_estimators":[100, 300],
+              "criterion":["gini"], 
+              "random_state":[seed]}
+
+
+# creating a function to get the scores with hyperparameter tuning.
+
+def HyperParameterTuning(model, params):
+    gridSearch = GridSearchCV(model, params, verbose=0, cv=10,
+                              scoring="accuracy", n_jobs = -1)
+    gridSearch.fit(X_train, y_train)
+    bestParams, bestScore = gridSearch.best_params_,(gridSearch.best_score_*100, 2)
+    return bestScore, bestParams
+
+modelstotune = [lr, svc, rf, knn, dt, gbc, abc, etc]
+
+parametersLists = [lrParams, svcParams, rfParams, knnParams,
+                   dtParams, gbcParams, abcParams, etcParams]
+
+HyperParameterTuning(gbc, gbcParams)
+
+#The best models and the best parameters was
+
+# Model ETC
+
+((82.64464925755249, 2),
+ {'bootstrap': False,
+  'criterion': 'gini',
+  'max_depth': None,
+  'max_features': 3,
+  'min_samples_leaf': 3,
+  'min_samples_split': 10,
+  'n_estimators': 100,
+  'random_state': 40})
+
+# Model RF
+
+((83.12852022529442, 2),
+ {'criterion': 'gini',
+  'max_features': 'sqrt',
+  'min_samples_leaf': 3,
+  'min_samples_split': 3,
+  'n_estimators': 15,
+  'random_state': 44})
+
+# Model GBC
+
+((83.12852022529442, 2),
+ {'learning_rate': 0.01,
+  'max_depth': 4,
+  'max_features': 1.0,
+  'min_samples_split': 2,
+  'random_state': 40})
+
+# =============================================================================
+# From this point Im only going to work with this models and parameters
+# =============================================================================
+
+gbc = GradientBoostingClassifier(learning_rate = 0.01,
+  max_depth = 4, max_features = 1.0, min_samples_split = 2, 
+  random_state = 40)
+                                 
+                                 
+rf = RandomForestClassifier(criterion= "gini", max_features="sqrt",
+  min_samples_leaf= 3, min_samples_split = 3, n_estimators= 15,
+  random_state = 40)
+
+
+etc = ExtraTreesClassifier(bootstrap = False, criterion = "gini",
+  max_depth = None, max_features = 3, min_samples_leaf = 3,
+  min_samples_split = 10, n_estimators = 100, random_state = 40)
+
+modelspicked = [gbc, rf, etc]
+
+# lets see the accuracy in the train data
+
+Trainaccurracy =list(map(calculateTrainAccuracy, modelspicked))
+
+Trainaccurracy
+
+Testaccurracy =list(map(calculateTestAccuracy, modelspicked))
+
+Testaccurracy
+
+# it seens that the best models are RF and ETC.
+
+# =============================================================================
+# Getting the feature importances
+# =============================================================================
+
+def GetFeatureImportance(model):
+    
+    featureimportances = pd.DataFrame({"feature": X_train.columns,
+                             "importance": model.feature_importances_})
+    
+    featureimportancesdorted = featureimportances.sort_values("importance", 
+                                                          ascending=False)
+    
+    return featureimportancesdorted
+
+
+def plot(model):
+        importance = GetFeatureImportance(model)
+        sns.barplot(x=importance["importance"],
+                    y=importance["feature"], data=importance)
+    
+
+plot(rf)
+
+
+
+# =============================================================================
+# Preparing the test data 
+# =============================================================================
+
+test = pd.read_csv("test.csv")
+
+test.columns
+
+
+test.drop("Cabin", axis=1, inplace=True)
+
+
+test["Embarked"].fillna(test["Embarked"].value_counts().index[0],
+                        inplace=True)
+
+
+test["Age"].fillna(np.mean(titanic["Age"]), inplace=True)
+
+
+test["SexEncoded"] = labelencoder.fit_transform(test["Sex"])
+test["PclassEncoded"] = labelencoder.fit_transform(test["Pclass"])
+test["EmbarkedEncoded"] = labelencoder.fit_transform(test["Embarked"])
+
+test.columns
+
+titlename= test.Name.str.split(".").str.get(0).str.split(",").str.get(1)
+
+# there are some titles with a little values so we are going to put it
+# in another category
+
+
+titlename.replace(["Dr", "Rev", "Major", "Col", "Capt"], "Officer", inplace=True,
+              regex=True)
+
+titlename.replace(to_replace = ["Dona", "Jonkheer", "Countess", 
+                                "Sir", "Lady", "Don"], value = "Aristocrat", 
+                  inplace = True,regex=True)
+
+titlename.replace({"Mlle":"Miss", "Ms":"Miss", "Mme":"Mrs"}, 
+                  inplace = True,regex=True)
+
+titlename.replace({"the Aristocrat":"Aristocrat"}, inplace = True,regex=True)
+
+
+test["Titlename"] = titlename
+test.drop("Name", axis=1, inplace=True)
+
+
+# now we are going to convert this new column to category
+
+test["Titlename"] = test["Titlename"].astype("category")
+
+# and we are going to pass it to numerical 
+
+test["TitleEnconded"] = labelencoder.fit_transform(test["Titlename"])
+
+
+
+
+
+test["FamilySize"] = test["SibSp"]+test["Parch"] + 1
+
+test["FamilySize"].value_counts()
+
+# we are goint to replace the number with categories
+
+test["FamilySize"].replace(1, "single", inplace = True, regex=True)
+test["FamilySize"].replace([2,3], "small", inplace = True, regex=True)
+test["FamilySize"].replace([4,5,6], "medium", inplace = True, regex=True)
+test["FamilySize"].replace([7,11,8], "large", inplace = True, regex=True)
+
+# now we are going to convert this new column to category
+
+test["FamilySize"] = test["FamilySize"].astype("category")
+
+# and we are going to pass it to numerical 
+
+test["FamilySizeEncoded"] = labelencoder.fit_transform(test["FamilySize"])
+
+
+# here we are taking the first digit of the ticket 
+# then if the first digit is a number we are putting an N and otherwise we
+# are putting the digit
+
+first_digit_ticket = test.Ticket.str.split(" ").str.get(0).str.get(0)
+
+test["first_digit_ticket"] = np.where(test.Ticket.str.isdigit(), "N", first_digit_ticket)
+
+# now we are going to convert this new column to category
+
+test["first_digit_ticket"] = test["first_digit_ticket"].astype("category")
+
+# and we are going to pass it to numerical 
+
+test["first_digit_ticket_encoded"] = labelencoder.fit_transform(test["first_digit_ticket"])
+
+
+
+columns= ["SexEncoded", "PclassEncoded", "EmbarkedEncoded",
+          "TitleEnconded", "FamilySizeEncoded", "first_digit_ticket_encoded"]
+
+for i in columns:
+    test[i]=test[i].astype("int")
+    
+
+test.drop(["Pclass", "Sex", "SibSp", "Parch", "Ticket",
+              "Embarked", "Titlename", "FamilySize", 
+              "first_digit_ticket"], axis=1, inplace= True)
+
+test.columns
+
+
+test["Fare"].fillna(np.mean(test["Fare"]), inplace=True)
+
+# =============================================================================
+# Doing the actual prediction using rf
+# =============================================================================
+
+                                 
+rf = RandomForestClassifier(criterion= "gini", max_features="sqrt",
+  min_samples_leaf= 3, min_samples_split = 3, n_estimators= 15,
+  random_state = 40)
+
+
+rf.fit(X, y)
+
+
+rf.predict(test)
+
+# =============================================================================
+# Creating the submision  with RF
+# =============================================================================
+
+submisionRF1 = pd.DataFrame({"PassengerId": test["PassengerId"],
+                            "Survived":rf.predict(test)})
+
+
+submisionRF1.to_csv("submisionRF1.csv", index=False)
+
+submisionRF1
+
+
+# =============================================================================
+# Creating the submision  with ETC
+# =============================================================================
+
+etc = ExtraTreesClassifier(bootstrap = False, criterion = "gini",
+  max_depth = None, max_features = 3, min_samples_leaf = 3,
+  min_samples_split = 10, n_estimators = 100, random_state = 40)
+
+etc.fit(X, y)
+
+submisionETC1 = pd.DataFrame({"PassengerId": test["PassengerId"],
+                            "Survived":etc.predict(test)})
+
+
+submisionETC1.to_csv("submisionETC1.csv", index=False)
+
