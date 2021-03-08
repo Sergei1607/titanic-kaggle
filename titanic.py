@@ -25,8 +25,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
+
+# import packages for machine learning
+
 from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import scale
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_score
@@ -46,7 +48,8 @@ from sklearn.model_selection import GridSearchCV
 
 pd.set_option("display.max_columns", 12)
 plt.style.use("ggplot")
-# load dataset using pandas 
+
+# load train dataset using pandas 
 
 titanic = pd.read_csv("train.csv")
 
@@ -85,7 +88,7 @@ titanic.dtypes
 
 titanic.isnull().sum()
 
-# Due to the fact that almost every cabin value is null, im going to drop it
+# Due to the fact that almost every cabin value is null, I'm going to drop it
 
 titanic.drop("Cabin", axis=1, inplace=True)
 
@@ -103,6 +106,7 @@ titanic.describe()
 # See diferents plots describing numeric variables
 
 pd.plotting.scatter_matrix(titanic)
+
 titanic[["Age", "Fare", "SibSp", "Parch"]].plot.box()
 
 # See a correlation matrix
@@ -117,9 +121,11 @@ titanic.corr()
 titanic["Embarked"].fillna(titanic["Embarked"].value_counts().index[0],
                            inplace=True)
 
-# In the case of the column Age im going to replaced with the mean of the column
+# In the case of the column Age and Fare im going to replaced with the mean of the column
 
 titanic["Age"].fillna(np.mean(titanic["Age"]), inplace=True)
+
+titanic["Fare"].fillna(np.mean(titanic["Fare"]), inplace=True)
 
 
 # Another describe
@@ -143,15 +149,15 @@ titanic["EmbarkedEncoded"] = labelencoder.fit_transform(titanic["Embarked"])
 # Dealing with the name feature 
 # This is a very cool way of dealing with names and probably finding
 # good information.
-# This is why it is important to deal with every feature.
+# This is why it is important to deal with every feature and not just drop it.
 # =============================================================================
 
-# here what we are doing is extracting the title of the person
+# Here what we are doing is extracting the title of the person
 
 titlename= titanic.Name.str.split(".").str.get(0).str.split(",").str.get(1)
 print(titlename.value_counts())
 
-# there are some titles with a little values so we are going to put it
+# there are some titles with little values so we are going to put it
 # in another category
 
 
@@ -169,8 +175,7 @@ titlename.replace({"the Aristocrat":"Aristocrat"}, inplace = True,regex=True)
 
 print(titlename.value_counts())
 
-### now we are going to append this data to our table 
-# and drop the name column
+### now we are going to append this data to our table and drop the name column
 
 titanic["Titlename"] = titlename
 titanic.drop("Name", axis=1, inplace=True)
@@ -189,16 +194,14 @@ titanic["TitleEnconded"] = labelencoder.fit_transform(titanic["Titlename"])
 # =============================================================================
 # Dealing with SibSP and Parch 
 # Here this two features basically represents the size of the family
-# so we are going to summarized and then create a new feature called 
-# size family.
+# so we are going to summarized and then create a new feature called size family.
 # =============================================================================
-
 
 titanic["FamilySize"] = titanic["SibSp"]+titanic["Parch"] + 1
 
 titanic["FamilySize"].value_counts()
 
-# we are goint to replace the number with categories
+# we are going to replace the number with categories
 
 titanic["FamilySize"].replace(1, "single", inplace = True, regex=True)
 titanic["FamilySize"].replace([2,3], "small", inplace = True, regex=True)
@@ -236,11 +239,9 @@ titanic["first_digit_ticket"] = titanic["first_digit_ticket"].astype("category")
 titanic["first_digit_ticket_encoded"] = labelencoder.fit_transform(titanic["first_digit_ticket"])
 
 
-
 # =============================================================================
 # At whis point we have done feature enginnering to all features 
 # =============================================================================
-
 
 # lets go the correlation again
 
@@ -271,7 +272,6 @@ ax.set_ylabel("Survival")
 # Findings: It seem like women survived a lot more than man, as seen by the 
 # chart an by the correlation
 # =============================================================================
-
 
 ax = sns.boxplot(x=titanic.SurvivedEncoded, y= titanic.Fare, data= titanic)
 
@@ -308,7 +308,6 @@ ax = sns.barplot(x=titanic.SurvivedEncoded, y= titanic.FamilySizeEncoded, data= 
 
 ax.set_xlabel("Survived")
 ax.set_ylabel("familySize")
-
 
 # =============================================================================
 # Findings: People with big families tends to survive more.
@@ -363,13 +362,10 @@ sns.heatmap(corr, vmin=-1, vmax=1, center=0,
     cmap=sns.diverging_palette(20, 220, n=200),
     square=True)
 
-# lets see if there is high variance in some features
-
-titanic.describe
 
 # =============================================================================
 # =============================================================================
-# # Generating our X and Y
+# # Generating our X and y data for testing the model before doing the submission.
 # =============================================================================
 # =============================================================================
 
@@ -386,7 +382,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3,
 
 # =============================================================================
 # =============================================================================
-# # Creamos nuestro clasificador, en este caso un KNN con 11 vecinos
+# We are going to start using a KKN classifier with 11 neighbors
 # =============================================================================
 # =============================================================================
 
@@ -434,8 +430,6 @@ print(accuracy)
 # on the test data
 # =============================================================================
 
-
-
 # =============================================================================
 # =============================================================================
 # =============================================================================
@@ -474,7 +468,6 @@ dt = DecisionTreeClassifier(random_state = seed)
 
 gbc = GradientBoostingClassifier(random_state = seed)
 
-
 #8.Adaboost Classifier
 
 abc = AdaBoostClassifier(random_state = seed)
@@ -483,15 +476,13 @@ abc = AdaBoostClassifier(random_state = seed)
 
 etc = ExtraTreesClassifier(random_state = seed)
 
-
-
 #List of all the models and indices
 
 modelNames = ["LR", "SVC", "RF", "KNN", "GNB", "DT", "GBC", "ABC", "ETC"]
 models = [lr, svc, rf, knn, gnb, dt, gbc, abc, etc]
 
 
-# creating a function to get the accuracies of all models with train and test
+# creating a function to get the accuracies of all models with train and test data
 
 def calculateTrainAccuracy(model):
     
@@ -524,6 +515,7 @@ modelScoresTest = list(map( calculateTestAccuracy, models))
 
 testAccuracy = pd.DataFrame(modelScoresTest, columns = ["testAccuracy"], 
                              index=modelNames)
+
 testnAccuracySorted = testAccuracy .sort_values(by="testAccuracy", ascending=False)
 
 testnAccuracySorted
@@ -532,9 +524,9 @@ testnAccuracySorted
 
 accuraciesvalues = pd.DataFrame()
 
-accuraciesvalues["testAccuracy"]=testAccuracy["testAccuracy"]
+accuraciesvalues["testAccuracy"]= testAccuracy["testAccuracy"]
 
-accuraciesvalues["trainAccuracy"]=trainAccuracy["trainAccuracy"]
+accuraciesvalues["trainAccuracy"]= trainAccuracy["trainAccuracy"]
 
 accuraciesvalues.sort_values("testAccuracy", ascending=False)
 
@@ -542,7 +534,6 @@ accuraciesvalues.sort_values("testAccuracy", ascending=False)
 # With this information we can see that it seems that RF and ETC are the best
 # models.
 # =============================================================================
-
 
 # =============================================================================
 # To confirm this we have to do some crossvalidation 
@@ -633,8 +624,11 @@ etcParams = {"max_depth":[None],
 def HyperParameterTuning(model, params):
     gridSearch = GridSearchCV(model, params, verbose=0, cv=10,
                               scoring="accuracy", n_jobs = -1)
+    
     gridSearch.fit(X_train, y_train)
+    
     bestParams, bestScore = gridSearch.best_params_,(gridSearch.best_score_*100, 2)
+    
     return bestScore, bestParams
 
 modelstotune = [lr, svc, rf, knn, dt, gbc, abc, etc]
@@ -642,11 +636,13 @@ modelstotune = [lr, svc, rf, knn, dt, gbc, abc, etc]
 parametersLists = [lrParams, svcParams, rfParams, knnParams,
                    dtParams, gbcParams, abcParams, etcParams]
 
+# Note: Here i apply the function one by one due to computational resources.
+
 HyperParameterTuning(gbc, gbcParams)
 
 #The best models and the best parameters was
 
-# Model ETC
+# Model ExtraTreesClassifier
 
 ((82.64464925755249, 2),
  {'bootstrap': False,
@@ -658,7 +654,7 @@ HyperParameterTuning(gbc, gbcParams)
   'n_estimators': 100,
   'random_state': 40})
 
-# Model RF
+# Model RandomForest 
 
 ((83.12852022529442, 2),
  {'criterion': 'gini',
@@ -668,7 +664,7 @@ HyperParameterTuning(gbc, gbcParams)
   'n_estimators': 15,
   'random_state': 44})
 
-# Model GBC
+# Model Gradient Boosting Classifier.
 
 ((83.12852022529442, 2),
  {'learning_rate': 0.01,
@@ -678,7 +674,7 @@ HyperParameterTuning(gbc, gbcParams)
   'random_state': 40})
 
 # =============================================================================
-# From this point Im only going to work with this models and parameters
+# From this point I'm only going to work with this models and parameters.
 # =============================================================================
 
 gbc = GradientBoostingClassifier(learning_rate = 0.01,
@@ -697,7 +693,7 @@ etc = ExtraTreesClassifier(bootstrap = False, criterion = "gini",
 
 modelspicked = [gbc, rf, etc]
 
-# lets see the accuracy in the train data
+# lets check the accuracy in the train data and test data.
 
 Trainaccurracy =list(map(calculateTrainAccuracy, modelspicked))
 
@@ -724,13 +720,13 @@ def GetFeatureImportance(model):
     return featureimportancesdorted
 
 
-def plot(model):
+def Importanceplot(model):
         importance = GetFeatureImportance(model)
         sns.barplot(x=importance["importance"],
                     y=importance["feature"], data=importance)
     
 
-plot(rf)
+Importanceplot(rf)
 
 
 
@@ -738,12 +734,17 @@ plot(rf)
 # Preparing the test data 
 # =============================================================================
 
+## In this point I repeated everything done with the train data
+
 test = pd.read_csv("test.csv")
 
 test.columns
 
+# dropin Cabin
 
 test.drop("Cabin", axis=1, inplace=True)
+
+# dealing with missing values.
 
 
 test["Embarked"].fillna(test["Embarked"].value_counts().index[0],
@@ -752,12 +753,15 @@ test["Embarked"].fillna(test["Embarked"].value_counts().index[0],
 
 test["Age"].fillna(np.mean(titanic["Age"]), inplace=True)
 
+test["Fare"].fillna(np.mean(test["Fare"]), inplace=True)
+
+# Converting features to numeric.
 
 test["SexEncoded"] = labelencoder.fit_transform(test["Sex"])
 test["PclassEncoded"] = labelencoder.fit_transform(test["Pclass"])
 test["EmbarkedEncoded"] = labelencoder.fit_transform(test["Embarked"])
 
-test.columns
+# Dealing with the name feature 
 
 titlename= test.Name.str.split(".").str.get(0).str.split(",").str.get(1)
 
@@ -791,7 +795,7 @@ test["Titlename"] = test["Titlename"].astype("category")
 test["TitleEnconded"] = labelencoder.fit_transform(test["Titlename"])
 
 
-
+# Dealing with SibSP and Parch 
 
 
 test["FamilySize"] = test["SibSp"]+test["Parch"] + 1
@@ -813,10 +817,7 @@ test["FamilySize"] = test["FamilySize"].astype("category")
 
 test["FamilySizeEncoded"] = labelencoder.fit_transform(test["FamilySize"])
 
-
-# here we are taking the first digit of the ticket 
-# then if the first digit is a number we are putting an N and otherwise we
-# are putting the digit
+# Dealing with ticket
 
 first_digit_ticket = test.Ticket.str.split(" ").str.get(0).str.get(0)
 
@@ -830,7 +831,7 @@ test["first_digit_ticket"] = test["first_digit_ticket"].astype("category")
 
 test["first_digit_ticket_encoded"] = labelencoder.fit_transform(test["first_digit_ticket"])
 
-
+# we have to convert all data types again to numbers 
 
 columns= ["SexEncoded", "PclassEncoded", "EmbarkedEncoded",
           "TitleEnconded", "FamilySizeEncoded", "first_digit_ticket_encoded"]
@@ -838,18 +839,15 @@ columns= ["SexEncoded", "PclassEncoded", "EmbarkedEncoded",
 for i in columns:
     test[i]=test[i].astype("int")
     
+# and drop the features that we dont need
 
 test.drop(["Pclass", "Sex", "SibSp", "Parch", "Ticket",
               "Embarked", "Titlename", "FamilySize", 
               "first_digit_ticket"], axis=1, inplace= True)
 
-test.columns
-
-
-test["Fare"].fillna(np.mean(test["Fare"]), inplace=True)
 
 # =============================================================================
-# Doing the actual prediction using rf
+# Prediction using Random Forest.
 # =============================================================================
 
                                  
@@ -861,10 +859,8 @@ rf = RandomForestClassifier(criterion= "gini", max_features="sqrt",
 rf.fit(X, y)
 
 
-rf.predict(test)
-
 # =============================================================================
-# Creating the submision  with RF
+# Creating the submission  with RF
 # =============================================================================
 
 submisionRF1 = pd.DataFrame({"PassengerId": test["PassengerId"],
@@ -873,11 +869,8 @@ submisionRF1 = pd.DataFrame({"PassengerId": test["PassengerId"],
 
 submisionRF1.to_csv("submisionRF1.csv", index=False)
 
-submisionRF1
-
-
 # =============================================================================
-# Creating the submision  with ETC
+# Prediction using Random Forest.
 # =============================================================================
 
 etc = ExtraTreesClassifier(bootstrap = False, criterion = "gini",
@@ -886,9 +879,18 @@ etc = ExtraTreesClassifier(bootstrap = False, criterion = "gini",
 
 etc.fit(X, y)
 
+# =============================================================================
+# Creating the submission  with ETC
+# =============================================================================
+
+
 submisionETC1 = pd.DataFrame({"PassengerId": test["PassengerId"],
                             "Survived":etc.predict(test)})
 
 
 submisionETC1.to_csv("submisionETC1.csv", index=False)
+
+# =============================================================================
+# Trying to improve the accusary using assembly.
+# =============================================================================
 
