@@ -43,6 +43,11 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import accuracy_score
+
+
+from sklearn.ensemble import VotingClassifier
+from sklearn.ensemble import BaggingClassifier
 
 # Configuration
 
@@ -729,6 +734,77 @@ def Importanceplot(model):
 Importanceplot(rf)
 
 
+# =============================================================================
+# =============================================================================
+# =============================================================================
+# # # Using emsemble 
+# =============================================================================
+# =============================================================================
+# =============================================================================
+
+
+modelspicked = [("Gradient Boosting Classifier", gbc), ("RandomForest", rf),
+                ("ExtraTreesClassifier",etc)]
+
+vc = VotingClassifier(estimators = modelspicked, voting="soft")
+
+vc.fit(X_train, y_train)
+
+y_pred = vc.predict(X_test)
+
+calculateTestAccuracy(vc)
+calculateTrainAccuracy(vc)
+
+accuracy_score(y_test, y_pred)
+
+# we should use voting soft 
+
+# =============================================================================
+# Doing cross validation with emsemble
+# =============================================================================
+
+softXValScore = cross_val_score(vc, X_train, y_train, cv = 10, 
+                                scoring = "accuracy")
+
+softXValScore
+
+# =============================================================================
+# =============================================================================
+# =============================================================================
+# # # Bagging 
+# =============================================================================
+# =============================================================================
+# =============================================================================
+
+
+bc = BaggingClassifier(base_estimator=vc, n_estimators=300, n_jobs=-1)
+
+bc.fit(X_train, y_train)
+
+y_pred = bc.predict(X_test)
+
+
+calculateTestAccuracy(bc)
+calculateTrainAccuracy(bc)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # =============================================================================
 # Preparing the test data 
@@ -845,6 +921,7 @@ test.drop(["Pclass", "Sex", "SibSp", "Parch", "Ticket",
               "Embarked", "Titlename", "FamilySize", 
               "first_digit_ticket"], axis=1, inplace= True)
 
+test
 
 # =============================================================================
 # Prediction using Random Forest.
@@ -856,7 +933,7 @@ rf = RandomForestClassifier(criterion= "gini", max_features="sqrt",
   random_state = 40)
 
 
-rf.fit(X, y)
+rf.fit(X,y)
 
 
 # =============================================================================
@@ -893,4 +970,40 @@ submisionETC1.to_csv("submisionETC1.csv", index=False)
 # =============================================================================
 # Trying to improve the accusary using assembly.
 # =============================================================================
+
+modelspicked = [("Gradient Boosting Classifier", gbc), ("RandomForest", rf),
+                ("ExtraTreesClassifier",etc)]
+
+vc = VotingClassifier(estimators = modelspicked, voting="soft")
+
+vc.fit(X, y)
+
+submisionvc1 = pd.DataFrame({"PassengerId": test["PassengerId"],
+                            "Survived":vc.predict(test)})
+
+
+submisionvc1.to_csv("submisionvc1.csv", index=False)
+
+# =============================================================================
+# Trying to improve the accusary using bagging
+# =============================================================================
+
+bc = BaggingClassifier(base_estimator=vc, n_estimators=300, n_jobs=-1)
+
+bc.fit(X, y)
+
+submisionbc1 = pd.DataFrame({"PassengerId": test["PassengerId"],
+                            "Survived":bc.predict(test)})
+
+
+submisionbc1.to_csv("submisionbc1.csv", index=False)
+
+# baggin not working
+
+# =============================================================================
+# =============================================================================
+# # # The best score we achieve was 0.787 using emsemble
+# =============================================================================
+# =============================================================================
+
 
